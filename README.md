@@ -69,7 +69,6 @@ Each service operates **independently** and communicates using **Kafka** for **e
 
 Each microservice has a dedicated README with detailed information:
 
-- <a href="./services/config-server/README.md" target="_blank">**Config Service**</a>
 - [**Config Service**](./services/config-server/README.md)
 - [**Discovery Service**](./services/discovery/README.md)
 - [**API Gateway**](./services/gateway/README.md)
