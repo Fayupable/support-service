@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/support
+    username: fayupable
+    password: fayupable
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    generate-ddl: true
+    open-in-view: false
+
+#  kafka:
+#    producer:
+#      bootstrap-servers: localhost:9092
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+#      properties:
+#        spring.json.add.type.headers: true
+#        spring.json.type.mapping: supportConfirmation:com.fayupable.test.kafka.SupportConfirmation
+
+
+server:
+  port: 8120
+
+
+application:
+  config:
+    user-url: localhost:8222/user
+    image-url: localhost:8222/images
+

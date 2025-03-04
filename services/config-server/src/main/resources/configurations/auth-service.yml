@@ -1,0 +1,6 @@
+server:
+  port: 8070
+
+application:
+  config:
+    user-url: localhost:8222/user/auth

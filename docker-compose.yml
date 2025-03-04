@@ -1,0 +1,247 @@
+services:
+
+  postgres:
+    container_name: ms_pg_sql
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  pgadmin:
+    container_name: ms_pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  mongodb:
+    container_name: ms_mongo_db
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo:/data
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+
+  mongo-express:
+    container_name: ms_mongo_express
+    image: mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${ME_CONFIG_MONGODB_ADMINUSERNAME}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${ME_CONFIG_MONGODB_ADMINPASSWORD}
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+
+  zipkin:
+    container_name: zipkin
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - microservices-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - microservices-net
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: ms_kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    networks:
+      - microservices-net
+
+  mail-dev:
+    container_name: ms_mail_dev
+    image: maildev/maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+
+  redis:
+    container_name: ms_redis
+    image: redis:latest
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-net
+
+  redis-commander:
+    container_name: ms_redis_commander
+    image: rediscommander/redis-commander:latest
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8150:8150"
+    networks:
+      - microservices-net
+
+
+  config-server:
+    container_name: ms_config_server
+    build:
+      context: ./services/config-server
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  discovery:
+    container_name: ms_discovery
+    build:
+      context: ./services/discovery
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  user-service:
+    container_name: ms_user_service
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8100:8100"
+    depends_on:
+      - discovery
+      - postgres
+      - kafka
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  auth-service:
+    container_name: ms_auth_service
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8070:8070"
+    depends_on:
+      - user-service
+      - postgres
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  image-service:
+    container_name: ms_image_service
+    build:
+      context: ./services/image-service
+      dockerfile: Dockerfile
+    ports:
+      - "8110:8110"
+    depends_on:
+      - discovery
+      - mongodb
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  support-service:
+    container_name: ms_support_service
+    build:
+      context: ./services/support-service
+      dockerfile: Dockerfile
+    ports:
+      - "8120:8120"
+    depends_on:
+      - discovery
+      - postgres
+      - redis
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  notification:
+    container_name: ms_notification
+    build:
+      context: ./services/notification
+      dockerfile: Dockerfile
+    ports:
+      - "8040:8040"
+    depends_on:
+      - discovery
+      - kafka
+      - mail-dev
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  gateway:
+    container_name: ms_gateway
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8222:8222"
+    depends_on:
+      - config-server
+      - discovery
+      - auth-service
+      - user-service
+      - support-service
+      - image-service
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  postgres:
+  pgadmin:
+  mongo:

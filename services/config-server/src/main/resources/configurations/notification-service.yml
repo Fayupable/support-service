@@ -1,0 +1,31 @@
+server:
+  port: 8040
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification
+    username: fayupable
+    password: fayupable
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+
+  mail:
+    host: localhost
+    port: 1025
+    username: fayupable
+    password: fayupable
+    properties:
+      mail:
+        smtp:
+          trust: "*"
+        auth: true
+        starttls:
+          enabled: true
+        connectiontimeout: 5000
+        timeout: 3000
+        writetimeout: 5000

@@ -1,0 +1,36 @@
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/user/**
+          filters:
+            - AuthenticationFilter
+        - id: support-service
+          uri: lb://support-service
+          predicates:
+            - Path=/support-tickets/**
+          filters:
+            - AuthenticationFilter
+        - id: image-service
+          uri: lb://image-service
+          predicates:
+            - Path=/images/**
+          filters:
+            - AuthenticationFilter
+server:
+  port: 8222
+
+auth:
+  token:
+    expirationInMils: ${JWT_EXPIRATION}
+    jwtSecret: ${JWT_SECRET}
